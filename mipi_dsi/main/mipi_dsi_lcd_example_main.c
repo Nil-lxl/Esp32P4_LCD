@@ -16,96 +16,13 @@
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_ldo_regulator.h"
 #include "driver/gpio.h"
+#include "soc/gpio_sig_map.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "lvgl.h"
-#include "esp_lcd_st7703.h"
-#include "esp_lcd_st7703_720x720.h"
-#include "esp_lcd_jd9365.h"
-#include "vernon_gt911.h"
 
-static const char *TAG = "example";
+#include "lcd_defines.h"
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// Please update the following configuration according to your LCD Spec //////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#if CONFIG_EXAMPLE_LCD_USE_ST7703
-#define EXAMPLE_MIPI_DSI_DPI_CLK_MHZ  40
-#define EXAMPLE_MIPI_DSI_LCD_H_RES    640
-#define EXAMPLE_MIPI_DSI_LCD_V_RES    480
-#define EXAMPLE_MIPI_DSI_LCD_HSYNC    120
-#define EXAMPLE_MIPI_DSI_LCD_HBP      120
-#define EXAMPLE_MIPI_DSI_LCD_HFP      120
-#define EXAMPLE_MIPI_DSI_LCD_VSYNC    5
-#define EXAMPLE_MIPI_DSI_LCD_VBP      13
-#define EXAMPLE_MIPI_DSI_LCD_VFP      17
-
-#elif CONFIG_EXAMPLE_LCD_USE_ST7703_720x720
-#define EXAMPLE_MIPI_DSI_DPI_CLK_MHZ  30
-#define EXAMPLE_MIPI_DSI_LCD_H_RES    720
-#define EXAMPLE_MIPI_DSI_LCD_V_RES    720
-#define EXAMPLE_MIPI_DSI_LCD_HSYNC    20
-#define EXAMPLE_MIPI_DSI_LCD_HBP      80
-#define EXAMPLE_MIPI_DSI_LCD_HFP      80
-#define EXAMPLE_MIPI_DSI_LCD_VSYNC    4
-#define EXAMPLE_MIPI_DSI_LCD_VBP      12
-#define EXAMPLE_MIPI_DSI_LCD_VFP      30
-
-#elif CONFIG_EXAMPLE_LCD_USE_JD9365
-#define EXAMPLE_MIPI_DSI_DPI_CLK_MHZ  35
-#define EXAMPLE_MIPI_DSI_LCD_H_RES    800
-#define EXAMPLE_MIPI_DSI_LCD_V_RES    1280
-#define EXAMPLE_MIPI_DSI_LCD_HSYNC    24
-#define EXAMPLE_MIPI_DSI_LCD_HBP      24
-#define EXAMPLE_MIPI_DSI_LCD_HFP      30
-#define EXAMPLE_MIPI_DSI_LCD_VSYNC    4
-#define EXAMPLE_MIPI_DSI_LCD_VBP      12
-#define EXAMPLE_MIPI_DSI_LCD_VFP      20
-#endif
-
-#define EXAMPLE_MIPI_DSI_LANE_NUM          2    // 2 data lanes
-#define EXAMPLE_MIPI_DSI_LANE_BITRATE_MBPS 1000 // 1Gbps
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// Please update the following configuration according to your Board Design //////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// The "VDD_MIPI_DPHY" should be supplied with 2.5V, it can source from the internal LDO regulator or from external LDO chip
-#define EXAMPLE_MIPI_DSI_PHY_PWR_LDO_CHAN       3  // LDO_VO3 is connected to VDD_MIPI_DPHY
-#define EXAMPLE_MIPI_DSI_PHY_PWR_LDO_VOLTAGE_MV 2500
-#define EXAMPLE_LCD_BK_LIGHT_ON_LEVEL           1
-#define EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL          !EXAMPLE_LCD_BK_LIGHT_ON_LEVEL
-#define EXAMPLE_PIN_NUM_BK_LIGHT                -1
-
-#if CONFIG_EXAMPLE_LCD_USE_EK79007
-//LCD RST PIN
-#define EXAMPLE_PIN_NUM_LCD_RST                 4
-#else
-#define EXAMPLE_PIN_NUM_LCD_RST                 24
-#endif
-
-#if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
-#define EXAMPLE_PIN_NUM_REFRESH_MONITOR         20  // Monitor the Refresh Rate by toggling the GPIO
-#endif
-
-#ifdef CONFIG_EXAMPLE_LCD_USE_TOUCH_ENABLED
-#define TOUCH_GT911_SDA  7
-#define TOUCH_GT911_SCL  8
-#define TOUCH_GT911_INT  21
-#define TOUCH_GT911_RTN  22
-
-#define TOUCH_PAD_WIDTH  1280
-#define TOUCH_PAD_HEIGHT 800
-#endif
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// Please update the following configuration according to your Application ///////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#define EXAMPLE_LVGL_DRAW_BUF_LINES    (EXAMPLE_MIPI_DSI_LCD_V_RES / 10) // number of display lines in each draw buffer
-#define EXAMPLE_LVGL_TICK_PERIOD_MS    2
-#define EXAMPLE_LVGL_TASK_STACK_SIZE   (12 * 1024)
-#define EXAMPLE_LVGL_TASK_PRIORITY     2
 
 // LVGL library is not thread-safe, this example will call LVGL APIs from different tasks, so use a mutex to protect it
 static _lock_t lvgl_api_lock;
@@ -225,20 +142,20 @@ static void example_bsp_init_refresh_monitor_io(void)
 #endif
 
 
-// void GT911_test(void *param){
-//     uint16_t x,y;
-//     while (1){
-//         if(GT911_touched(&vernonGt911)){
-//             //
-//             // for(int i=0;i<5;i++){
-//                 GT911_read_pos(&vernonGt911,&x,&y,0);
-//                 ESP_LOGW(TAG,"No: %d, touched x: %d, touched y: %d\n", 0,  x, y);
-//             // }
-//         }
-//         vTaskDelay(100 / portTICK_PERIOD_MS);
-//     }
+void GT911_test(void *param){
+    uint16_t x,y;
+    while (1){
+        if(GT911_touched(&vernonGt911)){
+            //
+            // for(int i=0;i<5;i++){
+                GT911_read_pos(&vernonGt911,&x,&y,0);
+                ESP_LOGW(TAG,"No: %d, touched x: %d, touched y: %d\n", 0,  x, y);
+            // }
+        }
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
 
-// }
+}
 
 void app_main(void)
 {
@@ -381,6 +298,8 @@ void app_main(void)
     // set the callback which can copy the rendered image to an area of the display
     lv_display_set_flush_cb(display, example_lvgl_flush_cb);
 
+    // lv_display_set_rotation(display,LV_DISP_ROTATION_90);
+
     ESP_LOGI(TAG, "Register DPI panel event callback for LVGL flush ready notification");
     esp_lcd_dpi_panel_event_callbacks_t cbs = {
         .on_color_trans_done = example_notify_lvgl_flush_ready,
@@ -414,6 +333,4 @@ void app_main(void)
     _lock_acquire(&lvgl_api_lock);
     example_lvgl_demo_ui(display);
     _lock_release(&lvgl_api_lock);
-    
-    // xTaskCreate(GT911_test,"gt911_test",4*1024,NULL,12,NULL);
 }
