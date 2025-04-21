@@ -8,6 +8,7 @@ extern "C" {
 #include "esp_lcd_st7703.h"
 #include "esp_lcd_st7703_720x720.h"
 #include "esp_lcd_jd9365.h"
+#include "esp_lcd_ek79007.h"
 #include "vernon_gt911.h"
 
 static const char *TAG = "example";
@@ -16,7 +17,17 @@ static const char *TAG = "example";
 //////////////////// Please update the following configuration according to your LCD Spec //////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-#if CONFIG_EXAMPLE_LCD_USE_ST7703
+#if CONFIG_EXAMPLE_LCD_USE_EK79007
+#define EXAMPLE_MIPI_DSI_DPI_CLK_MHZ  30
+#define EXAMPLE_MIPI_DSI_LCD_H_RES    1024
+#define EXAMPLE_MIPI_DSI_LCD_V_RES    600
+#define EXAMPLE_MIPI_DSI_LCD_HSYNC    10
+#define EXAMPLE_MIPI_DSI_LCD_HBP      120
+#define EXAMPLE_MIPI_DSI_LCD_HFP      120
+#define EXAMPLE_MIPI_DSI_LCD_VSYNC    1
+#define EXAMPLE_MIPI_DSI_LCD_VBP      20
+#define EXAMPLE_MIPI_DSI_LCD_VFP      10
+#elif CONFIG_EXAMPLE_LCD_USE_ST7703
 #define EXAMPLE_MIPI_DSI_DPI_CLK_MHZ  40
 #define EXAMPLE_MIPI_DSI_LCD_H_RES    640
 #define EXAMPLE_MIPI_DSI_LCD_V_RES    480
@@ -48,6 +59,7 @@ static const char *TAG = "example";
 #define EXAMPLE_MIPI_DSI_LCD_VSYNC    4
 #define EXAMPLE_MIPI_DSI_LCD_VBP      12
 #define EXAMPLE_MIPI_DSI_LCD_VFP      20
+
 #endif
 
 #define EXAMPLE_MIPI_DSI_LANE_NUM          2    // 2 data lanes
@@ -81,8 +93,8 @@ static const char *TAG = "example";
 #define TOUCH_GT911_INT  21
 #define TOUCH_GT911_RTN  22
 
-#define TOUCH_PAD_WIDTH  720
-#define TOUCH_PAD_HEIGHT 720
+#define TOUCH_PAD_WIDTH  1024
+#define TOUCH_PAD_HEIGHT 600
 #endif
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your Application ///////////////////////////

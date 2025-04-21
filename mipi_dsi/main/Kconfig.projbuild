@@ -19,6 +19,8 @@ menu "Example Configuration"
         help
             Select LCD controller model.
 
+        config EXAMPLE_LCD_USE_EK79007
+            bool "EK79007"
         config EXAMPLE_LCD_USE_ST7703_720x720 
             bool "ST7703_720x720"
         config EXAMPLE_LCD_USE_ST7703

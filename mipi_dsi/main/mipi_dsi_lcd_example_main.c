@@ -218,7 +218,21 @@ void app_main(void)
 #endif
     };
 
-#if CONFIG_EXAMPLE_LCD_USE_ST7703
+#if CONFIG_EXAMPLE_LCD_USE_EK79007
+    ek79007_vendor_config_t vendor_config = {
+        .mipi_config = {
+            .dsi_bus = mipi_dsi_bus,
+            .dpi_config = &dpi_config,
+        },
+    };
+    esp_lcd_panel_dev_config_t lcd_dev_config = {
+        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        .bits_per_pixel = 24,
+        .vendor_config = &vendor_config,
+    };
+    ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(mipi_dbi_io, &lcd_dev_config, &mipi_dpi_panel));
+#elif CONFIG_EXAMPLE_LCD_USE_ST7703
     st7703_vendor_config_t vendor_config = {
         .mipi_config = {
             .dsi_bus = mipi_dsi_bus,
@@ -266,7 +280,7 @@ void app_main(void)
 
     ESP_ERROR_CHECK(esp_lcd_panel_reset(mipi_dpi_panel));
     ESP_ERROR_CHECK(esp_lcd_panel_init(mipi_dpi_panel));
-    ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(mipi_dpi_panel,true));
+    // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(mipi_dpi_panel,true));
     // turn on backlight
     example_bsp_set_lcd_backlight(EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
 
@@ -298,7 +312,7 @@ void app_main(void)
     // set the callback which can copy the rendered image to an area of the display
     lv_display_set_flush_cb(display, example_lvgl_flush_cb);
 
-    // lv_display_set_rotation(display,LV_DISP_ROTATION_90);
+    lv_display_set_rotation(display,LV_DISPLAY_ROTATION_180);
 
     ESP_LOGI(TAG, "Register DPI panel event callback for LVGL flush ready notification");
     esp_lcd_dpi_panel_event_callbacks_t cbs = {

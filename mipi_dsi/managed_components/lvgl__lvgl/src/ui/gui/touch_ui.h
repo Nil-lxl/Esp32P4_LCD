@@ -10,14 +10,16 @@ extern "C" {
 #endif
 
 #include "lvgl.h"
-#include "ui/ui_helpers.h"
-#define UI_EXAMPLE_USE_IMGBTN  1
+#include "../src/ui/ui_helpers.h"
+#define UI_EXAMPLE_USE_IMGBTN  0
 
-#define CONTAINER_WIDTH		320
-#define CONTAINER_HEIGHT	240
-#define MENU_ITEM_SIDE		64
-#define MENU_ITEM_MARGIN	120
-#define ITEM_COUNT			5
+#define CONTAINER_WIDTH		480
+#define CONTAINER_HEIGHT	320
+#define NAV_ITEM_SIDE		64
+#define NAV_ITEM_MARGIN		60
+#define NAV_COUNT			3
+#define ITEM_COUNT			8
+
 
 //************home page***************//
 void touch_ui_home_init(void);
@@ -30,8 +32,15 @@ extern lv_obj_t* touch_screen1;
 void ui_touch_screen2_init(void);
 extern lv_obj_t* touch_screen2;
 
+void ui_touch_screen3_init(void);
+extern lv_obj_t* touch_screen3;
+
+extern lv_obj_t* label_time;
+extern lv_obj_t* label_date;
+void update_localtime_cb(lv_timer_t* timer);
 void toggle_screen1_event(lv_event_t* e);
 void toggle_screen2_event(lv_event_t* e);
+void toggle_screen3_event(lv_event_t* e);
 void back_home_event(lv_event_t* e);
 
 //***********IMAGES************//
