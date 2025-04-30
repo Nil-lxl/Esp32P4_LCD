@@ -61,18 +61,17 @@ dependencies:
     source:
       type: idf
     version: 5.4.0
-  lvgl/lvgl:
-    component_hash: 096c69af22eaf8a2b721e3913da91918c5e6bf1a762a113ec01f401aa61337a0
+  lvgl:
     dependencies: []
     source:
-      registry_url: https://components.espressif.com/
-      type: service
+      path: E:\Projects\ESP32\DSI-MIPI\mipi_dsi\components\lvgl
+      type: local
     version: 9.2.2
 direct_dependencies:
 - espressif/esp_lcd_ek79007
 - espressif/esp_lcd_jd9365
 - espressif/esp_lcd_st7703
 - lvgl/lvgl
-manifest_hash: 41bc572d0ea31d70b01a03e6044be18c1553b9cf49aef784a6bba81d2ae63b5b
+manifest_hash: e25ffa06845a329483a931d738f37a64249f975fba5a5d8287a2fb95d3262234
 target: esp32p4
 version: 2.0.0

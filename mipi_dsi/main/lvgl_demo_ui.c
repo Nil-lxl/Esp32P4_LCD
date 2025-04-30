@@ -7,7 +7,8 @@
 #include "lvgl.h"
 #include "esp_log.h"
 #include "demos/lv_demos.h"
-#include "ui/ui.h"
+// #include "ui/ui.h"
+#include "src/ui/ui.h"
 
 static lv_style_t style_bullet;
 static lv_obj_t *scale1;

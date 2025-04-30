@@ -306,7 +306,6 @@ void app_main(void)
     buf2 = heap_caps_malloc(draw_buffer_sz, MALLOC_CAP_SPIRAM);
     assert(buf2);
     ESP_LOGI(TAG,"buffer1:%zd,buffer2:%zd,draw_buffer:%zd",sizeof(buf1),sizeof(buf2),draw_buffer_sz);
-
     // initialize LVGL draw buffers
     lv_display_set_buffers(display, buf1, buf2, draw_buffer_sz, LV_DISPLAY_RENDER_MODE_PARTIAL);
     // set the callback which can copy the rendered image to an area of the display
