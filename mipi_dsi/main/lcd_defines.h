@@ -63,7 +63,7 @@ static const char *TAG = "example";
 #endif
 
 #define EXAMPLE_MIPI_DSI_LANE_NUM          2    // 2 data lanes
-#define EXAMPLE_MIPI_DSI_LANE_BITRATE_MBPS 500 // 1Gbps
+#define EXAMPLE_MIPI_DSI_LANE_BITRATE_MBPS 500 // 500MGbps
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////// Please update the following configuration according to your Board Design //////////////////////////
