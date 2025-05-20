@@ -23,7 +23,6 @@
 
 #include "lcd_defines.h"
 
-
 // LVGL library is not thread-safe, this example will call LVGL APIs from different tasks, so use a mutex to protect it
 static _lock_t lvgl_api_lock;
 
@@ -40,9 +39,8 @@ static void example_lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uin
     esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, px_map);
 }
 
-Vernon_GT911 vernonGt911;
 #ifdef CONFIG_EXAMPLE_LCD_USE_TOUCH_ENABLED
-
+Vernon_GT911 vernonGt911;
 static void example_lvgl_touch_cb(lv_indev_t* indev,lv_indev_data_t* data){
     uint16_t x,y;
     if(GT911_touched(&vernonGt911)){
@@ -53,7 +51,6 @@ static void example_lvgl_touch_cb(lv_indev_t* indev,lv_indev_data_t* data){
     }else{
         data->state=LV_INDEV_STATE_RELEASED;
     }
-        
 }
 #endif
 

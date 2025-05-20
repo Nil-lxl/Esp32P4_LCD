@@ -45,7 +45,10 @@
         "gpio_sig_map.h": "c",
         "vernon_gt911.h": "c",
         "encoder_ui.h": "c",
-        "lv_timer.h": "c"
+        "lv_timer.h": "c",
+        "i2c.h": "c",
+        "compare": "c"
     },
-    "idf.flashType": "UART"
+    "idf.flashType": "UART",
+    "C_Cpp.errorSquiggles": "disabled"
 }
