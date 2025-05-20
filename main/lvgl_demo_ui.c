@@ -92,8 +92,8 @@ static void scale1_indic3_anim_cb(void *var, int32_t v)
 void example_lvgl_demo_ui(lv_display_t *disp)
 {
     // lv_demo_benchmark();
-    // lv_demo_widgets();
-    UI_init();
+    lv_demo_widgets();
+    // UI_init();
 
     // lv_obj_t* scr=lv_scr_act();
     // lv_obj_set_style_bg_color(scr,lv_palette_darken(LV_PALETTE_PINK,3),0);

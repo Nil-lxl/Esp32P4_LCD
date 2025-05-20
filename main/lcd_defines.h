@@ -18,7 +18,7 @@ static const char *TAG = "example";
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if CONFIG_EXAMPLE_LCD_USE_EK79007
-#define EXAMPLE_MIPI_DSI_DPI_CLK_MHZ  30
+#define EXAMPLE_MIPI_DSI_DPI_CLK_MHZ  40
 #define EXAMPLE_MIPI_DSI_LCD_H_RES    1024
 #define EXAMPLE_MIPI_DSI_LCD_V_RES    600
 #define EXAMPLE_MIPI_DSI_LCD_HSYNC    10

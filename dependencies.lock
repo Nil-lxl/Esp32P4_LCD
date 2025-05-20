@@ -64,7 +64,7 @@ dependencies:
   lvgl:
     dependencies: []
     source:
-      path: E:\Projects\ESP32\DSI-MIPI\mipi_dsi\components\lvgl
+      path: E:\Projects\ESP32\DSI-MIPI\components\lvgl
       type: local
     version: 9.2.2
 direct_dependencies:
