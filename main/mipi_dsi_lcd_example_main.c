@@ -8,28 +8,69 @@
 #include <unistd.h>
 #include <sys/lock.h>
 #include "sdkconfig.h"
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+
 #include "esp_timer.h"
+#include "esp_log.h"
+#include "esp_err.h"
+#include "esp_check.h"
+#include "esp_ldo_regulator.h"
+
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_mipi_dsi.h"
-#include "esp_ldo_regulator.h"
+#include "esp_lcd_touch.h"
+#include "esp_lcd_touch_gt911.h"
+
+#include "driver/i2c_master.h"
 #include "driver/gpio.h"
-#include "soc/gpio_sig_map.h"
-#include "esp_err.h"
-#include "esp_log.h"
+
 #include "lvgl.h"
+#include "esp_lvgl_port.h"
+#include "lcd_config.h"
 
-#include "lcd_defines.h"
 
-// LVGL library is not thread-safe, this example will call LVGL APIs from different tasks, so use a mutex to protect it
-static _lock_t lvgl_api_lock;
+static i2c_master_bus_handle_t i2c_bus_handle;
+static esp_lcd_touch_handle_t touch_handle;
+static esp_lcd_panel_io_handle_t touch_io_handle;
 
-extern void example_lvgl_demo_ui(lv_display_t *disp);
+esp_err_t touch_init() {
+    i2c_master_bus_config_t i2c_bus_cfg = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .sda_io_num = TOUCH_I2C_SDA,
+        .scl_io_num = TOUCH_I2C_SCL,
+        .i2c_port = I2C_NUM_0,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
+    };
 
-static void example_lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
-{
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &i2c_bus_handle));
+    const esp_lcd_touch_config_t touch_config = {
+        .x_max = MIPI_DSI_LCD_H_RES,
+        .y_max = MIPI_DSI_LCD_V_RES,
+        .rst_gpio_num = GPIO_NUM_NC,
+        .int_gpio_num = GPIO_NUM_NC,
+        .levels = {
+            .reset = 0,
+            .interrupt = 0,
+        },
+        .flags = {
+            .swap_xy = 0,
+            .mirror_x = 1,
+            .mirror_y = 1,
+        },
+    };
+    esp_lcd_panel_io_i2c_config_t touch_io_cfg = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
+    touch_io_cfg.scl_speed_hz = 400000;
+
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c_v2(i2c_bus_handle, &touch_io_cfg, &touch_io_handle));
+    ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(touch_io_handle, &touch_config, &touch_handle));
+    return ESP_OK;
+}
+
+static void example_lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
     esp_lcd_panel_handle_t panel_handle = lv_display_get_user_data(disp);
     int offsetx1 = area->x1;
     int offsetx2 = area->x2;
@@ -39,54 +80,8 @@ static void example_lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uin
     esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, px_map);
 }
 
-#ifdef CONFIG_EXAMPLE_LCD_USE_TOUCH_ENABLED
-Vernon_GT911 vernonGt911;
-static void example_lvgl_touch_cb(lv_indev_t* indev,lv_indev_data_t* data){
-    uint16_t x,y;
-    if(GT911_touched(&vernonGt911)){
-        GT911_read_pos(&vernonGt911,&x,&y,0);
-        data->point.x=x;
-        data->point.y=y;
-        data->state=LV_INDEV_STATE_PRESSED;
-    }else{
-        data->state=LV_INDEV_STATE_RELEASED;
-    }
-}
-#endif
-
-static void example_increase_lvgl_tick(void *arg)
-{
-    /* Tell LVGL how many milliseconds has elapsed */
-    lv_tick_inc(EXAMPLE_LVGL_TICK_PERIOD_MS);
-}
-
-static void example_lvgl_port_task(void *arg)
-{
-    ESP_LOGI(TAG, "Starting LVGL task");
-    uint32_t time_till_next_ms = 0;
-    while (1) {
-        _lock_acquire(&lvgl_api_lock);
-        time_till_next_ms = lv_timer_handler();
-        _lock_release(&lvgl_api_lock);
-
-        // in case of task watch dog timeout, set the minimal delay to 10ms
-        if (time_till_next_ms < 10) {
-            time_till_next_ms = 10;
-        }
-        usleep(1000 * time_till_next_ms);
-    }
-}
-
-static bool example_notify_lvgl_flush_ready(esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t *edata, void *user_ctx)
-{
-    lv_display_t *disp = (lv_display_t *)user_ctx;
-    lv_display_flush_ready(disp);
-    return false;
-}
-
 #if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
-static bool example_monitor_refresh_rate(esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t *edata, void *user_ctx)
-{
+static bool example_monitor_refresh_rate(esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t *edata, void *user_ctx) {
     static int io_level = 0;
     // please note, the real refresh rate should be 2*frequency of this GPIO toggling
     gpio_set_level(EXAMPLE_PIN_NUM_REFRESH_MONITOR, io_level);
@@ -95,41 +90,37 @@ static bool example_monitor_refresh_rate(esp_lcd_panel_handle_t panel, esp_lcd_d
 }
 #endif
 
-static void example_bsp_enable_dsi_phy_power(void)
-{
+static void enable_dsi_phy_power(void) {
     // Turn on the power for MIPI DSI PHY, so it can go from "No Power" state to "Shutdown" state
     esp_ldo_channel_handle_t ldo_mipi_phy = NULL;
-#ifdef EXAMPLE_MIPI_DSI_PHY_PWR_LDO_CHAN
+#ifdef MIPI_DSI_PHY_PWR_LDO_CHAN
     esp_ldo_channel_config_t ldo_mipi_phy_config = {
-        .chan_id = EXAMPLE_MIPI_DSI_PHY_PWR_LDO_CHAN,
-        .voltage_mv = EXAMPLE_MIPI_DSI_PHY_PWR_LDO_VOLTAGE_MV,
+        .chan_id = MIPI_DSI_PHY_PWR_LDO_CHAN,
+        .voltage_mv = MIPI_DSI_PHY_PWR_LDO_VOLTAGE_MV,
     };
     ESP_ERROR_CHECK(esp_ldo_acquire_channel(&ldo_mipi_phy_config, &ldo_mipi_phy));
     ESP_LOGI(TAG, "MIPI DSI PHY Powered on");
 #endif
 }
 
-static void example_bsp_init_lcd_backlight(void)
-{
-#if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
+static void init_lcd_backlight(void) {
+#if PIN_NUM_BK_LIGHT >= 0
     gpio_config_t bk_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_BK_LIGHT
+        .pin_bit_mask = 1ULL << PIN_NUM_BK_LIGHT
     };
     ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
 #endif
 }
 
-static void example_bsp_set_lcd_backlight(uint32_t level)
-{
+static void set_lcd_backlight(uint32_t level) {
 #if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
-    gpio_set_level(EXAMPLE_PIN_NUM_BK_LIGHT, level);
+    gpio_set_level(PIN_NUM_BK_LIGHT, level);
 #endif
 }
 
 #if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
-static void example_bsp_init_refresh_monitor_io(void)
-{
+static void init_refresh_monitor_io(void) {
     gpio_config_t monitor_io_conf = {
         .mode = GPIO_MODE_OUTPUT,
         .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_REFRESH_MONITOR,
@@ -138,77 +129,45 @@ static void example_bsp_init_refresh_monitor_io(void)
 }
 #endif
 
+static esp_lcd_panel_handle_t mipi_dsi_panel;
+static esp_lcd_panel_io_handle_t panel_io_handle;
 
-void GT911_test(void *param){
-    uint16_t x,y;
-    while (1){
-        if(GT911_touched(&vernonGt911)){
-            //
-            // for(int i=0;i<5;i++){
-                GT911_read_pos(&vernonGt911,&x,&y,0);
-                ESP_LOGW(TAG,"No: %d, touched x: %d, touched y: %d\n", 0,  x, y);
-            // }
-        }
-        vTaskDelay(100 / portTICK_PERIOD_MS);
-    }
-
-}
-
-void app_main(void)
-{
-#ifdef CONFIG_EXAMPLE_LCD_USE_TOUCH_ENABLED
-    GT911_init(&vernonGt911, TOUCH_GT911_SDA, TOUCH_GT911_SCL, TOUCH_GT911_INT,
-               TOUCH_GT911_RTN, I2C_NUM_0,GT911_ADDR1,
-               TOUCH_PAD_WIDTH, TOUCH_PAD_HEIGHT);
-
-    GT911_setRotation(&vernonGt911,ROTATION_NORMAL);
-    ESP_LOGW(TAG,"GT911 TouchPad Init");
-#endif    
-
-#if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
-    example_bsp_init_refresh_monitor_io();
-#endif
-
-    example_bsp_enable_dsi_phy_power();
-    example_bsp_init_lcd_backlight();
-    example_bsp_set_lcd_backlight(EXAMPLE_LCD_BK_LIGHT_OFF_LEVEL);
-
+esp_err_t mipi_lcd_init() {
     // create MIPI DSI bus first, it will initialize the DSI PHY as well
-    esp_lcd_dsi_bus_handle_t mipi_dsi_bus;
-    esp_lcd_dsi_bus_config_t bus_config = {
+    esp_lcd_dsi_bus_handle_t dsi_bus_handle;
+    esp_lcd_dsi_bus_config_t dsi_bus_config = {
         .bus_id = 0,
-        .num_data_lanes = EXAMPLE_MIPI_DSI_LANE_NUM,
+        .num_data_lanes = MIPI_DSI_LANE_NUM,
         .phy_clk_src = MIPI_DSI_PHY_CLK_SRC_DEFAULT,
-        .lane_bit_rate_mbps = EXAMPLE_MIPI_DSI_LANE_BITRATE_MBPS,
+        .lane_bit_rate_mbps = MIPI_DSI_LANE_BITRATE_MBPS,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&bus_config, &mipi_dsi_bus));
-
+    ESP_ERROR_CHECK(esp_lcd_new_dsi_bus(&dsi_bus_config, &dsi_bus_handle));
     ESP_LOGI(TAG, "Install MIPI DSI LCD control IO");
-    esp_lcd_panel_io_handle_t mipi_dbi_io;
     // we use DBI interface to send LCD commands and parameters
     esp_lcd_dbi_io_config_t dbi_config = {
         .virtual_channel = 0,
         .lcd_cmd_bits = 8,   // according to the LCD spec
         .lcd_param_bits = 8, // according to the LCD spec
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(mipi_dsi_bus, &dbi_config, &mipi_dbi_io));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_dbi(dsi_bus_handle, &dbi_config, &panel_io_handle));
 
     ESP_LOGI(TAG, "Install MIPI DSI LCD data panel");
-    esp_lcd_panel_handle_t mipi_dpi_panel = NULL;
+
     esp_lcd_dpi_panel_config_t dpi_config = {
         .virtual_channel = 0,
         .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,
-        .dpi_clock_freq_mhz = EXAMPLE_MIPI_DSI_DPI_CLK_MHZ,
+        .dpi_clock_freq_mhz = MIPI_DSI_PIXEL_CLK_MHZ,
         .in_color_format = LCD_COLOR_FMT_RGB888,
+        .num_fbs = 2,   //double frame buffer
         .video_timing = {
-            .h_size = EXAMPLE_MIPI_DSI_LCD_H_RES,
-            .v_size = EXAMPLE_MIPI_DSI_LCD_V_RES,
-            .hsync_back_porch = EXAMPLE_MIPI_DSI_LCD_HBP,
-            .hsync_pulse_width = EXAMPLE_MIPI_DSI_LCD_HSYNC,
-            .hsync_front_porch = EXAMPLE_MIPI_DSI_LCD_HFP,
-            .vsync_back_porch = EXAMPLE_MIPI_DSI_LCD_VBP,
-            .vsync_pulse_width = EXAMPLE_MIPI_DSI_LCD_VSYNC,
-            .vsync_front_porch = EXAMPLE_MIPI_DSI_LCD_VFP,
+            .h_size = MIPI_DSI_LCD_H_RES,
+            .v_size = MIPI_DSI_LCD_V_RES,
+            .hsync_back_porch = MIPI_DSI_LCD_HBP,
+            .hsync_pulse_width = MIPI_DSI_LCD_HSYNC,
+            .hsync_front_porch = MIPI_DSI_LCD_HFP,
+            .vsync_back_porch = MIPI_DSI_LCD_VBP,
+            .vsync_pulse_width = MIPI_DSI_LCD_VSYNC,
+            .vsync_front_porch = MIPI_DSI_LCD_VFP,
         },
 #if CONFIG_EXAMPLE_USE_DMA2D_COPY_FRAME
         .flags.use_dma2d = true, // use DMA2D to copy draw buffer into frame buffer
@@ -218,7 +177,7 @@ void app_main(void)
 #if CONFIG_EXAMPLE_LCD_USE_EK79007
     ek79007_vendor_config_t vendor_config = {
         .mipi_config = {
-            .dsi_bus = mipi_dsi_bus,
+            .dsi_bus = dsi_bus_handle,
             .dpi_config = &dpi_config,
         },
     };
@@ -228,11 +187,11 @@ void app_main(void)
         .bits_per_pixel = 24,
         .vendor_config = &vendor_config,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(mipi_dbi_io, &lcd_dev_config, &mipi_dpi_panel));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
 #elif CONFIG_EXAMPLE_LCD_USE_ST7703
     st7703_vendor_config_t vendor_config = {
         .mipi_config = {
-            .dsi_bus = mipi_dsi_bus,
+            .dsi_bus = dsi_bus_handle,
             .dpi_config = &dpi_config,
         },
     };
@@ -242,12 +201,12 @@ void app_main(void)
         .bits_per_pixel = 24,
         .vendor_config = &vendor_config,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_st7703(mipi_dbi_io, &lcd_dev_config, &mipi_dpi_panel));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st7703(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
 
 #elif CONFIG_EXAMPLE_LCD_USE_ST7703_720x720
     st7703_720_vendor_config_t vendor_config = {
         .mipi_config = {
-            .dsi_bus = mipi_dsi_bus,
+            .dsi_bus = dsi_bus_handle,
             .dpi_config = &dpi_config,
         },
     };
@@ -257,12 +216,12 @@ void app_main(void)
         .bits_per_pixel = 24,
         .vendor_config = &vendor_config,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_st7703_720(mipi_dbi_io, &lcd_dev_config, &mipi_dpi_panel));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_st7703_720(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
 
 #elif CONFIG_EXAMPLE_LCD_USE_JD9365
     jd9365_vendor_config_t vendor_config = {
         .mipi_config = {
-            .dsi_bus = mipi_dsi_bus,
+            .dsi_bus = dsi_bus_handle,
             .dpi_config = &dpi_config,
         },
     };
@@ -272,75 +231,91 @@ void app_main(void)
         .bits_per_pixel = 24,
         .vendor_config = &vendor_config,
     };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_jd9365(mipi_dbi_io, &lcd_dev_config, &mipi_dpi_panel));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_jd9365(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
 #endif
 
-    ESP_ERROR_CHECK(esp_lcd_panel_reset(mipi_dpi_panel));
-    ESP_ERROR_CHECK(esp_lcd_panel_init(mipi_dpi_panel));
-    // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(mipi_dpi_panel,true));
-    // turn on backlight
-    example_bsp_set_lcd_backlight(EXAMPLE_LCD_BK_LIGHT_ON_LEVEL);
+    ESP_ERROR_CHECK(esp_lcd_panel_reset(mipi_dsi_panel));
+    ESP_ERROR_CHECK(esp_lcd_panel_init(mipi_dsi_panel));
+    // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(mipi_dsi_panel,true));
 
-    ESP_LOGI(TAG, "Initialize LVGL library");
-    lv_init();
-    // create a lvgl display
-    lv_display_t *display = lv_display_create(EXAMPLE_MIPI_DSI_LCD_H_RES, EXAMPLE_MIPI_DSI_LCD_V_RES);
-    // associate the mipi panel handle to the display
-    lv_display_set_user_data(display, mipi_dpi_panel);
-    // set color depth
-    lv_display_set_color_format(display, LV_COLOR_FORMAT_RGB888);
-    // create draw buffer
-    void *buf1 = NULL;
-    void *buf2 = NULL;
-    ESP_LOGI(TAG, "Allocate separate LVGL draw buffers");
-    // Note:
-    // Keep the display buffer in **internal** RAM can speed up the UI because LVGL uses it a lot and it should have a fast access time
-    // This example allocate the buffer from PSRAM mainly because we want to save the internal RAM
-    
-    size_t draw_buffer_sz = EXAMPLE_MIPI_DSI_LCD_H_RES * EXAMPLE_LVGL_DRAW_BUF_LINES * sizeof(lv_color_t) *10;
-    buf1 = heap_caps_malloc(draw_buffer_sz, MALLOC_CAP_SPIRAM);
-    assert(buf1);
-    buf2 = heap_caps_malloc(draw_buffer_sz, MALLOC_CAP_SPIRAM);
-    assert(buf2);
+    return ESP_OK;
+}
+static lv_display_t *display;
+static lv_indev_t *lv_touch_indev;
+esp_err_t lvgl_init() {
 
-    // initialize LVGL draw buffers
-    lv_display_set_buffers(display, buf1, buf2, draw_buffer_sz, LV_DISPLAY_RENDER_MODE_PARTIAL);
-    // set the callback which can copy the rendered image to an area of the display
-    lv_display_set_flush_cb(display, example_lvgl_flush_cb);
+    const lvgl_port_cfg_t lvgl_cfg = {
+        .task_priority = 4,
+        .task_stack = 12 * 1024,
+        .task_affinity = -1,
+        .task_max_sleep_ms = 500,
+        .timer_period_ms = 5,
 
-    lv_display_set_rotation(display,LV_DISPLAY_ROTATION_180);
-
-    ESP_LOGI(TAG, "Register DPI panel event callback for LVGL flush ready notification");
-    esp_lcd_dpi_panel_event_callbacks_t cbs = {
-        .on_color_trans_done = example_notify_lvgl_flush_ready,
-#if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
-        .on_refresh_done = example_monitor_refresh_rate,
-#endif
     };
-    ESP_ERROR_CHECK(esp_lcd_dpi_panel_register_event_callbacks(mipi_dpi_panel, &cbs, display));
+    ESP_RETURN_ON_ERROR(lvgl_port_init(&lvgl_cfg), TAG, "LVGL port initialization failed");
+    uint32_t buf_size = MIPI_DSI_LCD_H_RES * MIPI_DSI_LCD_V_RES * 2;
 
-    ESP_LOGI(TAG, "Use esp_timer as LVGL tick timer");
-    const esp_timer_create_args_t lvgl_tick_timer_args = {
-        .callback = &example_increase_lvgl_tick,
-        .name = "lvgl_tick"
+    const lvgl_port_display_cfg_t disp_config = {
+        .panel_handle = mipi_dsi_panel,
+        .io_handle = panel_io_handle,
+        .buffer_size = buf_size,
+        .double_buffer = 1,
+        .hres = MIPI_DSI_LCD_H_RES,
+        .vres = MIPI_DSI_LCD_V_RES,
+        .monochrome = false,
+        .color_format = LV_COLOR_FORMAT_RGB888,
+        .rotation = {
+            .swap_xy = false,
+            .mirror_x = false,
+            .mirror_y = false,
+        },
+        .flags = {
+            .buff_dma = false,
+            .buff_spiram = true,
+            .direct_mode = true,
+            // .full_refresh = true,
+            .swap_bytes = false,
+            // .sw_rotate = true,
+        },
     };
-    esp_timer_handle_t lvgl_tick_timer = NULL;
-    ESP_ERROR_CHECK(esp_timer_create(&lvgl_tick_timer_args, &lvgl_tick_timer));
-    ESP_ERROR_CHECK(esp_timer_start_periodic(lvgl_tick_timer, EXAMPLE_LVGL_TICK_PERIOD_MS * 1000));
+    const lvgl_port_display_dsi_cfg_t dsi_config = {
+        .flags = {
+            .avoid_tearing = true,
+        }
+    };
+    display = lvgl_port_add_disp_dsi(&disp_config, &dsi_config);
 
+    const lvgl_port_touch_cfg_t touch_cfg = {
+        .disp = display,
+        .handle = touch_handle,
+    };
+    lv_touch_indev = lvgl_port_add_touch(&touch_cfg);
+
+    return ESP_OK;
+}
+
+extern void example_lvgl_demo_ui(lv_display_t *disp);
+
+void app_main(void) {
+
+    init_lcd_backlight();
 #ifdef CONFIG_EXAMPLE_LCD_USE_TOUCH_ENABLED
-    static lv_indev_t* touch_indev;
-    touch_indev=lv_indev_create();
-    lv_indev_set_type(touch_indev,LV_INDEV_TYPE_POINTER);
-    lv_indev_set_display(touch_indev,display);
-    lv_indev_set_read_cb(touch_indev,example_lvgl_touch_cb);
-#endif     
+    ESP_ERROR_CHECK(touch_init());
+#endif    
 
-    ESP_LOGI(TAG, "Create LVGL task");
-    xTaskCreate(example_lvgl_port_task, "LVGL", EXAMPLE_LVGL_TASK_STACK_SIZE, NULL, EXAMPLE_LVGL_TASK_PRIORITY, NULL);
+#if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
+    init_refresh_monitor_io();
+#endif
+    enable_dsi_phy_power();
 
-    ESP_LOGI(TAG, "Display LVGL Meter Widget");
-    _lock_acquire(&lvgl_api_lock);
+    // set_lcd_backlight(LCD_BK_LIGHT_OFF_LEVEL);
+
+    ESP_ERROR_CHECK(mipi_lcd_init());
+    ESP_ERROR_CHECK(lvgl_init());
+
+    // set_lcd_backlight(LCD_BK_LIGHT_ON_LEVEL);
+
+    lvgl_port_lock(0);
     example_lvgl_demo_ui(display);
-    _lock_release(&lvgl_api_lock);
+    lvgl_port_unlock();
 }
