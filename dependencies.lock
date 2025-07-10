@@ -81,6 +81,16 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.1.3
+  espressif/esp_serial_slave_link:
+    component_hash: d8c13c033a7604e9333b5d8ea45e0d6fec908fd552df7db20d33dd8d6916528d
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.1.0~1
   idf:
     source:
       type: idf
@@ -90,6 +100,7 @@ direct_dependencies:
 - espressif/esp_lcd_jd9365
 - espressif/esp_lcd_st7703
 - espressif/esp_lcd_touch_gt911
-manifest_hash: f710dba4c8a363d051cf5b398336812155489bc395bf9b3d6dfc9d0bf1d9443f
+- espressif/esp_serial_slave_link
+manifest_hash: c2a888c941eaac4aba8f9d3c2baa200bc2e93da92df41402be33c92b6dda3bd5
 target: esp32p4
 version: 2.0.0

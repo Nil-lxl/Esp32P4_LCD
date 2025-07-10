@@ -34,7 +34,7 @@
 
 static i2c_master_bus_handle_t i2c_bus_handle;
 static esp_lcd_touch_handle_t touch_handle;
-static esp_lcd_panel_io_handle_t touch_io_handle;
+static SemaphoreHandle_t at_send_cmd_sem;
 
 esp_err_t touch_init() {
     i2c_master_bus_config_t i2c_bus_cfg = {
@@ -62,6 +62,7 @@ esp_err_t touch_init() {
             .mirror_y = 1,
         },
     };
+    esp_lcd_panel_io_handle_t touch_io_handle;
     esp_lcd_panel_io_i2c_config_t touch_io_cfg = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
     touch_io_cfg.scl_speed_hz = 400000;
 
@@ -69,26 +70,6 @@ esp_err_t touch_init() {
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(touch_io_handle, &touch_config, &touch_handle));
     return ESP_OK;
 }
-
-static void example_lvgl_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map) {
-    esp_lcd_panel_handle_t panel_handle = lv_display_get_user_data(disp);
-    int offsetx1 = area->x1;
-    int offsetx2 = area->x2;
-    int offsety1 = area->y1;
-    int offsety2 = area->y2;
-    // pass the draw buffer to the driver
-    esp_lcd_panel_draw_bitmap(panel_handle, offsetx1, offsety1, offsetx2 + 1, offsety2 + 1, px_map);
-}
-
-#if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
-static bool example_monitor_refresh_rate(esp_lcd_panel_handle_t panel, esp_lcd_dpi_panel_event_data_t *edata, void *user_ctx) {
-    static int io_level = 0;
-    // please note, the real refresh rate should be 2*frequency of this GPIO toggling
-    gpio_set_level(EXAMPLE_PIN_NUM_REFRESH_MONITOR, io_level);
-    io_level = !io_level;
-    return false;
-}
-#endif
 
 static void enable_dsi_phy_power(void) {
     // Turn on the power for MIPI DSI PHY, so it can go from "No Power" state to "Shutdown" state
@@ -114,20 +95,10 @@ static void init_lcd_backlight(void) {
 }
 
 static void set_lcd_backlight(uint32_t level) {
-#if EXAMPLE_PIN_NUM_BK_LIGHT >= 0
+#if PIN_NUM_BK_LIGHT >= 0
     gpio_set_level(PIN_NUM_BK_LIGHT, level);
 #endif
 }
-
-#if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
-static void init_refresh_monitor_io(void) {
-    gpio_config_t monitor_io_conf = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << EXAMPLE_PIN_NUM_REFRESH_MONITOR,
-    };
-    ESP_ERROR_CHECK(gpio_config(&monitor_io_conf));
-}
-#endif
 
 static esp_lcd_panel_handle_t mipi_dsi_panel;
 static esp_lcd_panel_io_handle_t panel_io_handle;
@@ -240,6 +211,7 @@ esp_err_t mipi_lcd_init() {
 
     return ESP_OK;
 }
+
 static lv_display_t *display;
 static lv_indev_t *lv_touch_indev;
 esp_err_t lvgl_init() {
@@ -284,38 +256,37 @@ esp_err_t lvgl_init() {
         }
     };
     display = lvgl_port_add_disp_dsi(&disp_config, &dsi_config);
-
+#ifdef CONFIG_EXAMPLE_LCD_USE_TOUCH_ENABLED
     const lvgl_port_touch_cfg_t touch_cfg = {
         .disp = display,
         .handle = touch_handle,
     };
     lv_touch_indev = lvgl_port_add_touch(&touch_cfg);
 
+#endif
     return ESP_OK;
 }
 
 extern void example_lvgl_demo_ui(lv_display_t *disp);
+extern void sdio_at_startup(void);
 
 void app_main(void) {
 
+    enable_dsi_phy_power();
+
     init_lcd_backlight();
+    set_lcd_backlight(LCD_BK_LIGHT_OFF_LEVEL);
 #ifdef CONFIG_EXAMPLE_LCD_USE_TOUCH_ENABLED
     ESP_ERROR_CHECK(touch_init());
 #endif    
-
-#if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
-    init_refresh_monitor_io();
-#endif
-    enable_dsi_phy_power();
-
-    // set_lcd_backlight(LCD_BK_LIGHT_OFF_LEVEL);
-
     ESP_ERROR_CHECK(mipi_lcd_init());
     ESP_ERROR_CHECK(lvgl_init());
-
-    // set_lcd_backlight(LCD_BK_LIGHT_ON_LEVEL);
+    set_lcd_backlight(LCD_BK_LIGHT_ON_LEVEL);
 
     lvgl_port_lock(0);
     example_lvgl_demo_ui(display);
     lvgl_port_unlock();
+
+    sdio_at_startup();
+
 }

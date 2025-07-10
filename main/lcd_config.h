@@ -9,11 +9,11 @@ extern "C" {
 #include "esp_lcd_jd9365.h"
 #include "esp_lcd_ek79007.h"
 
-static const char *TAG = "example";
+static const char *TAG = "MIPI_LCD";
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// Please update the following configuration according to your LCD Spec //////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////// Please update the following configuration according to your LCD Spec //////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if CONFIG_EXAMPLE_LCD_USE_EK79007
 #define MIPI_DSI_PIXEL_CLK_MHZ  40
@@ -25,6 +25,7 @@ static const char *TAG = "example";
 #define MIPI_DSI_LCD_VSYNC    1
 #define MIPI_DSI_LCD_VBP      20
 #define MIPI_DSI_LCD_VFP      10
+
 #elif CONFIG_EXAMPLE_LCD_USE_ST7703
 #define MIPI_DSI_PIXEL_CLK_MHZ  40
 #define MIPI_DSI_LCD_H_RES    640
@@ -70,6 +71,7 @@ static const char *TAG = "example";
 // The "VDD_MIPI_DPHY" should be supplied with 2.5V, it can source from the internal LDO regulator or from external LDO chip
 #define MIPI_DSI_PHY_PWR_LDO_CHAN       3  // LDO_VO3 is connected to VDD_MIPI_DPHY
 #define MIPI_DSI_PHY_PWR_LDO_VOLTAGE_MV 2500
+
 #define LCD_BK_LIGHT_ON_LEVEL           1
 #define LCD_BK_LIGHT_OFF_LEVEL          !LCD_BK_LIGHT_ON_LEVEL
 #define PIN_NUM_BK_LIGHT                -1
@@ -81,26 +83,13 @@ static const char *TAG = "example";
 #define EXAMPLE_PIN_NUM_LCD_RST                 24
 #endif
 
-#if CONFIG_EXAMPLE_MONITOR_REFRESH_BY_GPIO
-#define EXAMPLE_PIN_NUM_REFRESH_MONITOR         20  // Monitor the Refresh Rate by toggling the GPIO
-#endif
+#define TOUCH_I2C_SDA       7
+#define TOUCH_I2C_SCL       8
+#define TOUCH_PIN_INT       21
+#define TOUCH_PIN_RTN       22
 
-#define TOUCH_I2C_SDA  7
-#define TOUCH_I2C_SCL  8
-#define TOUCH_PIN_INT  21
-#define TOUCH_PIN_RTN  22
-
-#define TOUCH_PAD_WIDTH  1024
-#define TOUCH_PAD_HEIGHT 600
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////////////////// Please update the following configuration according to your Application ///////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-#define EXAMPLE_LVGL_DRAW_BUF_LINES    (MIPI_DSI_LCD_V_RES/10 ) // number of display lines in each draw buffer
-#define EXAMPLE_LVGL_TICK_PERIOD_MS    2
-#define EXAMPLE_LVGL_TASK_STACK_SIZE   (16 * 1024)
-#define EXAMPLE_LVGL_TASK_PRIORITY     2
+#define TOUCH_PAD_WIDTH     MIPI_DSI_LCD_H_RES
+#define TOUCH_PAD_HEIGHT    MIPI_DSI_LCD_V_RES
 
 #ifdef __cplusplus
 }
