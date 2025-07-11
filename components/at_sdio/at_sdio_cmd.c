@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include "string.h"
 #include <sys/lock.h>
 #include "sdkconfig.h"
 
@@ -32,7 +33,7 @@ static const char *TAG = "SDIO_AT";
 
 // static SemaphoreHandle_t slave_send_cmd_sem;
 QueueHandle_t at_result_queue;
-static SemaphoreHandle_t at_result_mutex;
+SemaphoreHandle_t at_result_mutex;
 static essl_handle_t slave_handle;
 
 essl_handle_t get_sdio_slave(void) {
@@ -125,44 +126,63 @@ esp_err_t sdio_slave_reset(essl_handle_t handle) {
 }
 
 void sdio_receive_task(void *param) {
-    // init_at_result(&at_result);
     size_t buf_size = 1024 * 2;
     uint8_t read_buf[buf_size];
+    uint8_t result[buf_size];
+    bzero(result, buf_size);
+
+    // uint8_t result = malloc(buf_size);
+
+    while (1) {
+        esp_err_t ret;
+
+        ret = essl_wait_int(slave_handle, portMAX_DELAY);
+        if (ret == ESP_OK) {
+            ESP_LOGI(TAG, "wait int success");
+        } else {
+            ESP_LOGE(TAG, "wait int failed");
+        }
+
+        uint32_t intr_raw;
+
+        ret = essl_get_intr(slave_handle, &intr_raw, NULL, portMAX_DELAY);
+        if (ret == ESP_OK) {
+            ESP_LOGI(TAG, "get Interrupt success");
+        } else {
+            ESP_LOGE(TAG, "get Interrupt failed");
+        }
+        essl_clear_intr(slave_handle, intr_raw, portMAX_DELAY);
+        while (1) {
+            ret = essl_get_packet(slave_handle, read_buf, sizeof(read_buf), &buf_size, 100);
+
+            // printf("%s", read_buf);
+            strncat((char *)result, (char *)read_buf, strlen((char *)read_buf));
+
+            memset(read_buf, 0, sizeof(read_buf));
+
+            if (ret != ESP_OK) {
+                ESP_LOGW(TAG, "end");
+                printf("%s", result);
+                
+                if(xQueueSendFromISR(at_result_queue, result, NULL)==pdTRUE){
+                    ESP_LOGI(TAG,"queue successfully posted");
+                }else{
+                    ESP_LOGE(TAG,"queue post failed");
+                }
+
+                bzero(result, buf_size);
+                break;
+            }
+        }
+    }
+}
+
+void sdio_at_startup(void) {
     at_result_queue = xQueueCreate(20, 1024);
     if (at_result_queue == NULL) {
         ESP_LOGE(TAG, "create queue failed");
     }
 
-    char *result = malloc(1024);
-    bzero(result, 1024);
-
-    while (1) {
-        esp_err_t ret;
-        ret = essl_wait_int(slave_handle, portMAX_DELAY);
-        if (ret != ESP_OK) {
-            ESP_LOGE(TAG, "wait int error");
-        }
-
-        // uint32_t intr_raw, intr_st;
-        // ret = essl_get_intr(slave_handle, NULL, NULL, portMAX_DELAY);
-        // if (ret != ESP_OK) {
-        //     ESP_LOGE(TAG, "wait intr error");
-        // }
-        // essl_clear_intr(slave_handle, intr_raw, portMAX_DELAY);
-        while (1) {
-            ret = essl_get_packet(slave_handle, read_buf, sizeof(read_buf), &buf_size, 1000);
-            printf("%s", read_buf);
-            memset(read_buf, 0, sizeof(read_buf));
-
-            if (ret == ESP_OK) {
-                break;
-            }
-        }
-
-    }
-}
-
-void sdio_at_startup(void) {
     at_result_mutex = xSemaphoreCreateMutex();
     if (at_result_mutex == NULL) {
         ESP_LOGE(TAG, "create mutex failed");
@@ -173,7 +193,7 @@ void sdio_at_startup(void) {
     ESP_ERROR_CHECK(sdio_slave_init(&slave_handle));
     ESP_ERROR_CHECK(sdio_slave_reset(slave_handle));
 
-    xTaskCreate(sdio_receive_task, "at_receive", 4096, NULL, 20, NULL);
+    xTaskCreate(sdio_receive_task, "at_receive", 8 * 1024, NULL, 5, NULL);
 
 }
 

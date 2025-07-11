@@ -218,14 +218,14 @@ esp_err_t lvgl_init() {
 
     const lvgl_port_cfg_t lvgl_cfg = {
         .task_priority = 4,
-        .task_stack = 12 * 1024,
+        .task_stack = 24 * 1024,
         .task_affinity = -1,
         .task_max_sleep_ms = 500,
         .timer_period_ms = 5,
 
     };
     ESP_RETURN_ON_ERROR(lvgl_port_init(&lvgl_cfg), TAG, "LVGL port initialization failed");
-    uint32_t buf_size = MIPI_DSI_LCD_H_RES * MIPI_DSI_LCD_V_RES * 2;
+    uint32_t buf_size = MIPI_DSI_LCD_H_RES * MIPI_DSI_LCD_V_RES * 5;
 
     const lvgl_port_display_cfg_t disp_config = {
         .panel_handle = mipi_dsi_panel,

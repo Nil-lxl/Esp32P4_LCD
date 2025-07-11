@@ -16,7 +16,7 @@ static const char *TAG = "MIPI_LCD";
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if CONFIG_EXAMPLE_LCD_USE_EK79007
-#define MIPI_DSI_PIXEL_CLK_MHZ  40
+#define MIPI_DSI_PIXEL_CLK_MHZ  80
 #define MIPI_DSI_LCD_H_RES    1024
 #define MIPI_DSI_LCD_V_RES    600
 #define MIPI_DSI_LCD_HSYNC    10

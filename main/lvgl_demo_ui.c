@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: CC0-1.0
  */
 
+#include "string.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "demos/lv_demos.h"
@@ -13,6 +14,9 @@
 #include "at_sdio_cmd.h"
 
 static essl_handle_t at_handle;
+extern SemaphoreHandle_t at_result_mutex;
+extern QueueHandle_t at_result_queue;
+
 void wifi_ui(void);
 
 void example_lvgl_demo_ui(lv_display_t *disp) {
@@ -22,15 +26,22 @@ void example_lvgl_demo_ui(lv_display_t *disp) {
     wifi_ui();
 }
 
-extern QueueHandle_t at_result_queue;
 
-char *get_result() {
+void get_result() {
     uint8_t result[2048];
-    if (xQueueReceiveFromISR(at_result_queue, (void *)result, NULL)) {
-        
-        ESP_LOGW("result", "%s", result);
-    }
-    return (char *)result;
+    // if (xQueueReceiveFromISR(at_result_queue, (void *)result, NULL) == pdTRUE) {
+    //     ESP_LOGI(NULL, "get result success");
+    //     ESP_LOGI(NULL, "result:%s", result);
+    // }
+    // xSemaphoreTake(at_result_mutex, portMAX_DELAY);
+
+    // if (xSemaphoreTake(at_result_mutex, portMAX_DELAY)) {
+    //     ESP_LOGI(NULL, "get result success");
+    // } else {
+    //     ESP_LOGE(NULL, "get result failed");
+    // }
+
+    // xSemaphoreGive(at_result_mutex);
 }
 void btn_scan_cb(lv_event_t *e) {
     int ret = 0;
@@ -43,8 +54,9 @@ void btn_scan_cb(lv_event_t *e) {
             ESP_LOGE("TAG", "Essl Send Failed,Err Code:%d", ret);
         }
 
+        vTaskDelay(pdMS_TO_TICKS(100));
         get_result();
-        // at_result_t at_result = get_at_result();
+
     }
 
 }
