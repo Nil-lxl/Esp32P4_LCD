@@ -159,6 +159,20 @@ esp_err_t mipi_lcd_init() {
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
+#elif CONFIG_EXAMPLE_LCD_USE_H070B13
+    h070b13_vendor_config_t vendor_config = {
+        .mipi_config = {
+            .dsi_bus = dsi_bus_handle,
+            .dpi_config = &dpi_config,
+        },
+    };
+    esp_lcd_panel_dev_config_t lcd_dev_config = {
+        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        .bits_per_pixel = 24,
+        .vendor_config = &vendor_config,
+    };
+    ESP_ERROR_CHECK(esp_lcd_new_panel_h070b13(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
 #elif CONFIG_EXAMPLE_LCD_USE_ST7703
     st7703_vendor_config_t vendor_config = {
         .mipi_config = {
@@ -287,6 +301,6 @@ void app_main(void) {
     example_lvgl_demo_ui(display);
     lvgl_port_unlock();
 
-    sdio_at_startup();
+    // sdio_at_startup();
 
 }

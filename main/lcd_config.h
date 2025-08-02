@@ -8,6 +8,7 @@ extern "C" {
 #include "esp_lcd_st7703_720x720.h"
 #include "esp_lcd_jd9365.h"
 #include "esp_lcd_ek79007.h"
+#include "lcd_h070b13.h"
 
 static const char *TAG = "MIPI_LCD";
 
@@ -16,7 +17,7 @@ static const char *TAG = "MIPI_LCD";
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #if CONFIG_EXAMPLE_LCD_USE_EK79007
-#define MIPI_DSI_PIXEL_CLK_MHZ  80
+#define MIPI_DSI_PIXEL_CLK_MHZ  40
 #define MIPI_DSI_LCD_H_RES    1024
 #define MIPI_DSI_LCD_V_RES    600
 #define MIPI_DSI_LCD_HSYNC    10
@@ -25,6 +26,17 @@ static const char *TAG = "MIPI_LCD";
 #define MIPI_DSI_LCD_VSYNC    1
 #define MIPI_DSI_LCD_VBP      20
 #define MIPI_DSI_LCD_VFP      10
+
+#elif CONFIG_EXAMPLE_LCD_USE_H070B13
+#define MIPI_DSI_PIXEL_CLK_MHZ  58
+#define MIPI_DSI_LCD_H_RES    800
+#define MIPI_DSI_LCD_V_RES    1280
+#define MIPI_DSI_LCD_HSYNC    20
+#define MIPI_DSI_LCD_HBP      20
+#define MIPI_DSI_LCD_HFP      20
+#define MIPI_DSI_LCD_VSYNC    2
+#define MIPI_DSI_LCD_VBP      30
+#define MIPI_DSI_LCD_VFP      20
 
 #elif CONFIG_EXAMPLE_LCD_USE_ST7703
 #define MIPI_DSI_PIXEL_CLK_MHZ  40
@@ -80,7 +92,7 @@ static const char *TAG = "MIPI_LCD";
 //LCD RST PIN
 #define EXAMPLE_PIN_NUM_LCD_RST                 4
 #else
-#define EXAMPLE_PIN_NUM_LCD_RST                 24
+#define EXAMPLE_PIN_NUM_LCD_RST                 4
 #endif
 
 #define TOUCH_I2C_SDA       7

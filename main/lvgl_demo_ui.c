@@ -17,9 +17,9 @@ extern void wifi_ui(void);
 
 void example_lvgl_demo_ui(lv_display_t *disp) {
     // lv_demo_benchmark();
-    // lv_demo_widgets();
+    lv_demo_widgets();
     // UI_init();
-    wifi_ui();
+    // wifi_ui();
 }
 
 
