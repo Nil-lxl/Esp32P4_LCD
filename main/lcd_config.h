@@ -86,13 +86,13 @@ static const char *TAG = "MIPI_LCD";
 
 #define LCD_BK_LIGHT_ON_LEVEL           1
 #define LCD_BK_LIGHT_OFF_LEVEL          !LCD_BK_LIGHT_ON_LEVEL
-#define PIN_NUM_BK_LIGHT                -1
+#define PIN_NUM_BK_LIGHT                32
 
 #if CONFIG_EXAMPLE_LCD_USE_EK79007
 //LCD RST PIN
 #define EXAMPLE_PIN_NUM_LCD_RST                 4
 #else
-#define EXAMPLE_PIN_NUM_LCD_RST                 4
+#define EXAMPLE_PIN_NUM_LCD_RST                 33
 #endif
 
 #define TOUCH_I2C_SDA       7
