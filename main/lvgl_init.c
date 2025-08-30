@@ -7,19 +7,22 @@
 #include "esp_log.h"
 #include "esp_err.h"
 #include "esp_check.h"
-#include "esp_ldo_regulator.h"
+#include "esp_lcd_touch.h"
 
 #include "lvgl.h"
 #include "esp_lvgl_port.h"
 #include "lcd_config.h"
+#include "lcd_touch.h"
 
 static lv_display_t *display;
+static esp_lcd_touch_handle_t touch_handle;
 static lv_indev_t *lv_touch_indev;
 
-extern esp_lcd_panel_handle_t mipi_dsi_panel;
-extern esp_lcd_panel_io_handle_t panel_io_handle;
+static const char *TAG = "LVGL_INIT";
 
-static esp_err_t lvgl_init() {
+extern void example_lvgl_demo_ui(lv_display_t *disp);
+
+esp_err_t lvgl_init(esp_lcd_panel_handle_t *panel, esp_lcd_panel_io_handle_t *panel_io_handle) {
     const lvgl_port_cfg_t lvgl_cfg = {
         .task_priority = 4,
         .task_stack = 24 * 1024,
@@ -29,17 +32,19 @@ static esp_err_t lvgl_init() {
 
     };
     ESP_RETURN_ON_ERROR(lvgl_port_init(&lvgl_cfg), TAG, "LVGL port initialization failed");
-    uint32_t buf_size = MIPI_DSI_LCD_H_RES * MIPI_DSI_LCD_V_RES * 5;
+    uint32_t buf_size = LCD_H_RES * LCD_H_RES * 5;
 
     const lvgl_port_display_cfg_t disp_config = {
-        .panel_handle = mipi_dsi_panel,
-        .io_handle = panel_io_handle,
+        .panel_handle = *panel,
+#if CONFIG_LCD_USE_MIPI_INTERFACE
+        .io_handle = *panel_io_handle,
+#endif
         .buffer_size = buf_size,
         .double_buffer = 1,
-        .hres = MIPI_DSI_LCD_H_RES,
-        .vres = MIPI_DSI_LCD_V_RES,
+        .hres = LCD_H_RES,
+        .vres = LCD_V_RES,
         .monochrome = false,
-        .color_format = LV_COLOR_FORMAT_RGB888,
+        .color_format = LV_COLOR_FORMAT,
         .rotation = {
             .swap_xy = false,
             .mirror_x = false,
@@ -54,13 +59,27 @@ static esp_err_t lvgl_init() {
             // .sw_rotate = true,
         },
     };
+
+#if CONFIG_LCD_USE_MIPI_INTERFACE
     const lvgl_port_display_dsi_cfg_t dsi_config = {
         .flags = {
             .avoid_tearing = true,
         }
     };
     display = lvgl_port_add_disp_dsi(&disp_config, &dsi_config);
-#ifdef CONFIG_EXAMPLE_LCD_USE_TOUCH_ENABLED
+#elif CONFIG_LCD_USE_RGB_INTERFACE
+    const lvgl_port_display_rgb_cfg_t rgb_cfg = {
+        .flags = {
+            .bb_mode = false,
+            .avoid_tearing = true,
+        }
+    };
+    display = lvgl_port_add_disp_rgb(&disp_config, &rgb_cfg);
+#endif 
+
+#ifdef CONFIG_LCD_USE_TOUCH_ENABLED
+    lcd_touch_init(&touch_handle);
+
     const lvgl_port_touch_cfg_t touch_cfg = {
         .disp = display,
         .handle = touch_handle,
@@ -68,18 +87,13 @@ static esp_err_t lvgl_init() {
     lv_touch_indev = lvgl_port_add_touch(&touch_cfg);
 
 #endif
-    return ESP_OK;
-}
-
-extern void example_lvgl_demo_ui(lv_display_t *disp);
-
-esp_err_t lvgl_start(void) {
-    ESP_ERROR_CHECK(lvgl_init());
 
     lvgl_port_lock(0);
     example_lvgl_demo_ui(display);
     lvgl_port_unlock();
 
     return ESP_OK;
+
 }
+
 
