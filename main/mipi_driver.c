@@ -23,11 +23,16 @@
 
 #include "lvgl.h"
 #include "esp_lvgl_port.h"
+
 #include "lcd_config.h"
+#include "lcd_driver.h"
+
+#if CONFIG_LCD_USE_MIPI_INTERFACE
+
+static const char *TAG = "Mipi_driver";
 
 static i2c_master_bus_handle_t i2c_bus_handle;
 static esp_lcd_touch_handle_t touch_handle;
-static SemaphoreHandle_t at_send_cmd_sem;
 
 static esp_err_t lcd_touch_init() {
     i2c_master_bus_config_t i2c_bus_cfg = {
@@ -41,8 +46,8 @@ static esp_err_t lcd_touch_init() {
 
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_bus_cfg, &i2c_bus_handle));
     const esp_lcd_touch_config_t touch_config = {
-        .x_max = MIPI_DSI_LCD_H_RES,
-        .y_max = MIPI_DSI_LCD_V_RES,
+        .x_max = TOUCH_PAD_WIDTH,
+        .y_max = TOUCH_PAD_HEIGHT,
         .rst_gpio_num = GPIO_NUM_NC,
         .int_gpio_num = GPIO_NUM_NC,
         .levels = {
@@ -67,36 +72,21 @@ static esp_err_t lcd_touch_init() {
 static void enable_dsi_phy_power(void) {
     // Turn on the power for MIPI DSI PHY, so it can go from "No Power" state to "Shutdown" state
     esp_ldo_channel_handle_t ldo_mipi_phy = NULL;
-#ifdef MIPI_DSI_PHY_PWR_LDO_CHAN
+#ifdef MIPI_PHY_LDO_CHANNEL
     esp_ldo_channel_config_t ldo_mipi_phy_config = {
-        .chan_id = MIPI_DSI_PHY_PWR_LDO_CHAN,
-        .voltage_mv = MIPI_DSI_PHY_PWR_LDO_VOLTAGE_MV,
+        .chan_id = MIPI_PHY_LDO_CHANNEL,
+        .voltage_mv = MIPI_PHY_LDO_VOLTAGE,
     };
     ESP_ERROR_CHECK(esp_ldo_acquire_channel(&ldo_mipi_phy_config, &ldo_mipi_phy));
     ESP_LOGI(TAG, "MIPI DSI PHY Powered on");
 #endif
 }
 
-static void init_lcd_backlight(void) {
-#if PIN_NUM_BK_LIGHT >= 0
-    gpio_config_t bk_gpio_config = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << PIN_NUM_BK_LIGHT
-    };
-    ESP_ERROR_CHECK(gpio_config(&bk_gpio_config));
-#endif
-}
+static esp_lcd_panel_handle_t mipi_dsi_panel;
+static esp_lcd_panel_io_handle_t panel_io_handle;
 
-static void set_lcd_backlight(uint32_t level) {
-#if PIN_NUM_BK_LIGHT >= 0
-    gpio_set_level(PIN_NUM_BK_LIGHT, level);
-#endif
-}
-
-esp_lcd_panel_handle_t mipi_dsi_panel;
-esp_lcd_panel_io_handle_t panel_io_handle;
-
-static esp_err_t mipi_lcd_init() {
+esp_err_t mipi_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_handle_t *io_handle) {
+    enable_dsi_phy_power();
     // create MIPI DSI bus first, it will initialize the DSI PHY as well
     esp_lcd_dsi_bus_handle_t dsi_bus_handle;
     esp_lcd_dsi_bus_config_t dsi_bus_config = {
@@ -120,25 +110,25 @@ static esp_err_t mipi_lcd_init() {
     esp_lcd_dpi_panel_config_t dpi_config = {
         .virtual_channel = 0,
         .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,
-        .dpi_clock_freq_mhz = MIPI_DSI_PIXEL_CLK_MHZ,
+        .dpi_clock_freq_mhz = LCD_PIXEL_CLK_MHZ,
         .in_color_format = LCD_COLOR_FMT_RGB888,
         .num_fbs = 2,   //double frame buffer
         .video_timing = {
-            .h_size = MIPI_DSI_LCD_H_RES,
-            .v_size = MIPI_DSI_LCD_V_RES,
-            .hsync_back_porch = MIPI_DSI_LCD_HBP,
-            .hsync_pulse_width = MIPI_DSI_LCD_HSYNC,
-            .hsync_front_porch = MIPI_DSI_LCD_HFP,
-            .vsync_back_porch = MIPI_DSI_LCD_VBP,
-            .vsync_pulse_width = MIPI_DSI_LCD_VSYNC,
-            .vsync_front_porch = MIPI_DSI_LCD_VFP,
+            .h_size = LCD_H_RES,
+            .v_size = LCD_V_RES,
+            .hsync_back_porch = LCD_HBP,
+            .hsync_pulse_width = LCD_HSYNC,
+            .hsync_front_porch = LCD_HFP,
+            .vsync_back_porch = LCD_VBP,
+            .vsync_pulse_width = LCD_VSYNC,
+            .vsync_front_porch = LCD_VFP,
         },
 #if CONFIG_EXAMPLE_USE_DMA2D_COPY_FRAME
         .flags.use_dma2d = true, // use DMA2D to copy draw buffer into frame buffer
 #endif
     };
 
-#if CONFIG_EXAMPLE_LCD_USE_EK79007
+#if CONFIG_LCD_USE_PANEL_EK79007
     ek79007_vendor_config_t vendor_config = {
         .mipi_config = {
             .dsi_bus = dsi_bus_handle,
@@ -146,13 +136,13 @@ static esp_err_t mipi_lcd_init() {
         },
     };
     esp_lcd_panel_dev_config_t lcd_dev_config = {
-        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
+        .reset_gpio_num = PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = 24,
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
-#elif CONFIG_EXAMPLE_LCD_USE_H070B13
+#elif CONFIG_LCD_USE_PANEL_H070B13
     h070b13_vendor_config_t vendor_config = {
         .mipi_config = {
             .dsi_bus = dsi_bus_handle,
@@ -160,13 +150,13 @@ static esp_err_t mipi_lcd_init() {
         },
     };
     esp_lcd_panel_dev_config_t lcd_dev_config = {
-        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
+        .reset_gpio_num = PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = 24,
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_h070b13(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
-#elif CONFIG_EXAMPLE_LCD_USE_ST7703
+#elif CONFIG_LCD_USE_PANEL_ST7703
     st7703_vendor_config_t vendor_config = {
         .mipi_config = {
             .dsi_bus = dsi_bus_handle,
@@ -174,62 +164,26 @@ static esp_err_t mipi_lcd_init() {
         },
     };
     esp_lcd_panel_dev_config_t lcd_dev_config = {
-        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
+        .reset_gpio_num = PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = 24,
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st7703(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
-
-#elif CONFIG_EXAMPLE_LCD_USE_ST7703_720x720
-    st7703_720_vendor_config_t vendor_config = {
-        .mipi_config = {
-            .dsi_bus = dsi_bus_handle,
-            .dpi_config = &dpi_config,
-        },
-    };
-    esp_lcd_panel_dev_config_t lcd_dev_config = {
-        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
-        .bits_per_pixel = 24,
-        .vendor_config = &vendor_config,
-    };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_st7703_720(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
-
-#elif CONFIG_EXAMPLE_LCD_USE_JD9365
-    jd9365_vendor_config_t vendor_config = {
-        .mipi_config = {
-            .dsi_bus = dsi_bus_handle,
-            .dpi_config = &dpi_config,
-        },
-    };
-    esp_lcd_panel_dev_config_t lcd_dev_config = {
-        .reset_gpio_num = EXAMPLE_PIN_NUM_LCD_RST,
-        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
-        .bits_per_pixel = 24,
-        .vendor_config = &vendor_config,
-    };
-    ESP_ERROR_CHECK(esp_lcd_new_panel_jd9365(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
 #endif
 
     ESP_ERROR_CHECK(esp_lcd_panel_reset(mipi_dsi_panel));
     ESP_ERROR_CHECK(esp_lcd_panel_init(mipi_dsi_panel));
     // ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(mipi_dsi_panel,true));
 
-    return ESP_OK;
-}
-
-esp_err_t mipi_lcd_start(void) {
-    enable_dsi_phy_power();
-    init_lcd_backlight();
-    set_lcd_backlight(LCD_BK_LIGHT_OFF_LEVEL);
-
-#ifdef CONFIG_EXAMPLE_LCD_USE_TOUCH_ENABLED
-    ESP_ERROR_CHECK(lcd_touch_init());
-#endif 
-    ESP_ERROR_CHECK(mipi_lcd_init());
-
-    set_lcd_backlight(LCD_BK_LIGHT_ON_LEVEL); 
+    if (panel_handle) {
+        *panel_handle = mipi_dsi_panel;
+    }
+    if (panel_io_handle) {
+        *io_handle = panel_io_handle;
+    }
 
     return ESP_OK;
 }
+
+#endif
