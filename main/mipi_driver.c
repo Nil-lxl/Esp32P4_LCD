@@ -85,9 +85,7 @@ esp_err_t mipi_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_h
             .vsync_pulse_width = LCD_VSYNC,
             .vsync_front_porch = LCD_VFP,
         },
-#if CONFIG_EXAMPLE_USE_DMA2D_COPY_FRAME
         .flags.use_dma2d = true, // use DMA2D to copy draw buffer into frame buffer
-#endif
     };
 
 #if CONFIG_LCD_USE_PANEL_EK79007
@@ -100,7 +98,7 @@ esp_err_t mipi_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_h
     esp_lcd_panel_dev_config_t lcd_dev_config = {
         .reset_gpio_num = PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
-        .bits_per_pixel = 24,
+        .bits_per_pixel = LCD_BITS_PER_PIXEL,
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_ek79007(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
@@ -114,7 +112,7 @@ esp_err_t mipi_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_h
     esp_lcd_panel_dev_config_t lcd_dev_config = {
         .reset_gpio_num = PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
-        .bits_per_pixel = 24,
+        .bits_per_pixel = LCD_BITS_PER_PIXEL,
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_h070b13(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
@@ -128,7 +126,7 @@ esp_err_t mipi_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_h
     esp_lcd_panel_dev_config_t lcd_dev_config = {
         .reset_gpio_num = PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
-        .bits_per_pixel = 24,
+        .bits_per_pixel = LCD_BITS_PER_PIXEL,
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_st7703(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));

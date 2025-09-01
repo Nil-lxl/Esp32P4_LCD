@@ -56,7 +56,6 @@ void app_main(void) {
 #endif 
     set_lcd_backlight(1);
 
-    // ESP_ERROR_CHECK(mipi_lcd_start());
     ESP_ERROR_CHECK(lvgl_init(&lcd_panel, &lcd_panel_io));
 
 }

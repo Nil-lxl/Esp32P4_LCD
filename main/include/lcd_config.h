@@ -29,7 +29,7 @@ extern "C" {
 #define LCD_HBP                     20
 #define LCD_HFP                     20
 #define LCD_VSYNC                   2
-#define LCD_VBP                     0
+#define LCD_VBP                     30
 #define LCD_VFP                     20
 
 #elif CONFIG_LCD_USE_PANEL_ST7703

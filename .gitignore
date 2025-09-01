@@ -7,3 +7,4 @@ managed_components/
 /.vscode/
 /.devcontainer/
 /.idea
+/dependencies.lock

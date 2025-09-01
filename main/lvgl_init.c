@@ -40,7 +40,7 @@ esp_err_t lvgl_init(esp_lcd_panel_handle_t *panel, esp_lcd_panel_io_handle_t *pa
         .io_handle = *panel_io_handle,
 #endif
         .buffer_size = buf_size,
-        .double_buffer = 1,
+        .double_buffer = true,
         .hres = LCD_H_RES,
         .vres = LCD_V_RES,
         .monochrome = false,
