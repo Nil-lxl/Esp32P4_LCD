@@ -32,7 +32,7 @@ esp_err_t lvgl_init(esp_lcd_panel_handle_t *panel, esp_lcd_panel_io_handle_t *pa
 
     };
     ESP_RETURN_ON_ERROR(lvgl_port_init(&lvgl_cfg), TAG, "LVGL port initialization failed");
-    uint32_t buf_size = LCD_H_RES * LCD_H_RES * 5;
+    uint32_t buf_size = LCD_H_RES * LCD_H_RES * 10;
 
     const lvgl_port_display_cfg_t disp_config = {
         .panel_handle = *panel,

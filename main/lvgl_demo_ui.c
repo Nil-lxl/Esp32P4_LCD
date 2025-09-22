@@ -8,15 +8,12 @@
 #include "lvgl.h"
 #include "esp_log.h"
 #include "demos/lv_demos.h"
-#include "src/ui/ui.h"
-
 
 extern void wifi_ui(void);
 
 void example_lvgl_demo_ui(lv_display_t *disp) {
-    // lv_demo_benchmark();
-    lv_demo_widgets();
-    // UI_init();
+    lv_demo_benchmark();
+    // lv_demo_widgets();
 }
 
 

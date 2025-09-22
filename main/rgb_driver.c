@@ -41,7 +41,7 @@ esp_err_t rgb_lcd_init(esp_lcd_panel_handle_t *panel_handle) {
     esp_lcd_rgb_panel_config_t panel_config = {
         .data_width = LCD_DATA_BUS_WIDTH,
         .bits_per_pixel= LCD_BITS_PER_PIXEL,
-        // .bounce_buffer_size_px = 20 * LCD_H_RES,
+        // .bounce_buffer_size_px = 40 * LCD_H_RES,
         .dma_burst_size = 64,
         .num_fbs = LCD_BUFFER_COUNT,
         .clk_src = LCD_CLK_SRC_DEFAULT,
@@ -87,7 +87,7 @@ esp_err_t rgb_lcd_init(esp_lcd_panel_handle_t *panel_handle) {
             .vsync_front_porch = LCD_VFP,
             .vsync_pulse_width = LCD_VSYNC,
             .flags = {
-                .pclk_active_neg = true,
+                .pclk_active_neg = true
             },
         },
         .flags.fb_in_psram = true, // allocate frame buffer in PSRAM
