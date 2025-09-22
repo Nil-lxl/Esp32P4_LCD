@@ -23,6 +23,7 @@
 #include "lcd_driver.h"
 #include "lcd_config.h"
 #include "lcd_touch.h"
+#include "sd_card.h"
 
 static esp_lcd_panel_handle_t lcd_panel;
 static esp_lcd_panel_io_handle_t lcd_panel_io;
@@ -46,6 +47,7 @@ static void set_lcd_backlight(uint32_t level) {
 extern esp_err_t lvgl_init(esp_lcd_panel_handle_t *panel, esp_lcd_panel_io_handle_t *panel_io_handle);
 
 void app_main(void) {
+    sdcard_init();
 
     init_lcd_backlight();
 

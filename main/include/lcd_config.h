@@ -76,7 +76,7 @@ extern "C" {
 #define LCD_VBP                     6
 #define LCD_VFP                     20
 #elif CONFIG_LCD_USE_DEFAULT_RGB_PANEL
-#define LCD_PIXEL_CLK_HZ            (24 * 1000 * 1000)
+#define LCD_PIXEL_CLK_HZ            (22 * 1000 * 1000)
 #define LCD_H_RES                   1024
 #define LCD_V_RES                   600
 #define LCD_HSYNC                   24
