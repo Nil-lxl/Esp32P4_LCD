@@ -1,9 +1,56 @@
 menu "Example Configuration"
-    choice "Example Option"
-        default EXAMPLE_OPTION_1
+    choice
+        prompt "Select LCD Panel Interface"
+        default LCD_USE_MIPI_INTERFACE
         help
-            This is an example configuration option.
+            Select LCD Interface.
+        config LCD_USE_MIPI_INTERFACE
+            bool "MIPI DSI Interface"
+            default y
+            if LCD_USE_MIPI_INTERFACE
+                choice 
+                    prompt "Select LCD Panel"
+                    default LCD_USE_PANEL_EK79007
+                    help
+                        Select LCD Panel.
+                    config LCD_USE_PANEL_H070B13
+                        bool "H070B13"
+                        default y
 
+                    config LCD_USE_PANEL_EK79007
+                        bool "EK79007"
+
+                    config LCD_USE_PANEL_ST7703
+                        bool "ST7703"
+                endchoice
+            endif
+        config LCD_USE_RGB_INTERFACE
+            bool "RGB Interface"
+            default n
+            if LCD_USE_RGB_INTERFACE
+                choice 
+                    prompt "Select LCD Interface"
+                    config RGB_LCD_USE_SPI_INIT
+                        bool "RGB Use SPI Initialization"
+                        default n
+                        if RGB_LCD_USE_SPI_INIT
+                            choice 
+                                prompt "Select RGB LCD Panel"
+                                default LCD_USE_PANEL_H035A17
+                                help
+                                    Select RGB LCD Panel.
+                                config LCD_USE_PANEL_H035A17
+                                    bool "H035A17"
+                            endchoice
+                        endif
+                        
+                    config LCD_USE_DEFAULT_RGB_PANEL
+                        bool "Use Default RGB 1024_600 Panel"
+                endchoice
+            endif
     endchoice
 
+    config LCD_USE_TOUCH_ENABLED
+        bool "LCD USE TOUCH PANEL"
+        default n
 endmenu
