@@ -1,0 +1,9 @@
+menu "Example Configuration"
+    choice "Example Option"
+        default EXAMPLE_OPTION_1
+        help
+            This is an example configuration option.
+
+    endchoice
+
+endmenu
