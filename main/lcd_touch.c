@@ -16,8 +16,6 @@
 
 #include "esp_lcd_touch.h"
 #include "esp_lcd_touch_gt911.h"
-#include "esp_lcd_touch_gt1151.h"
-
 
 #include "lcd_config.h"
 
@@ -56,10 +54,9 @@ esp_err_t lcd_touch_init(esp_lcd_touch_handle_t *touch) {
     esp_lcd_panel_io_i2c_config_t touch_io_cfg = ESP_LCD_TOUCH_IO_I2C_GT911_CONFIG();
     touch_io_cfg.scl_speed_hz = 400000;
 
-    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c_v2(i2c_bus_handle, &touch_io_cfg, &touch_io_handle));
+    ESP_ERROR_CHECK(esp_lcd_new_panel_io_i2c(i2c_bus_handle, &touch_io_cfg, &touch_io_handle));
     ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt911(touch_io_handle, &touch_config, &touch_handle));
-    // ESP_ERROR_CHECK(esp_lcd_touch_new_i2c_gt1151(touch_io_handle, &touch_config, &touch_handle));
-
+    
 
     if (touch) {
         *touch = touch_handle;

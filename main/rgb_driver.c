@@ -24,7 +24,7 @@
 #include "esp_timer.h"
 
 #include "driver/gpio.h"
-#include "driver/jpeg_decode.h"
+// #include "driver/jpeg_decode.h"
 
 #include "lcd_config.h"
 // #include "lcd_h035a17.h"
@@ -40,7 +40,7 @@ esp_err_t rgb_lcd_init(esp_lcd_panel_handle_t *panel_handle) {
     ESP_LOGI(TAG, "Install RGB LCD panel driver");
     esp_lcd_rgb_panel_config_t panel_config = {
         .data_width = LCD_DATA_BUS_WIDTH,
-        .bits_per_pixel= LCD_BITS_PER_PIXEL,
+        // .bits_per_pixel= LCD_BITS_PER_PIXEL,
         // .bounce_buffer_size_px = 40 * LCD_H_RES,
         .dma_burst_size = 64,
         .num_fbs = LCD_BUFFER_COUNT,

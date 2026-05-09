@@ -5,8 +5,6 @@ extern "C" {
 #endif
 
 #include "esp_lcd_st7703.h"
-#include "esp_lcd_st7703_720x720.h"
-#include "esp_lcd_jd9365.h"
 #include "esp_lcd_ek79007.h"
 #include "lcd_h070b13.h"
 

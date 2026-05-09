@@ -67,7 +67,7 @@ esp_err_t esp_lcd_new_panel_h035a17(const esp_lcd_panel_io_handle_t io_handle,co
  *
  */
 #define H035A17_PANEL_IO_3WIRE_SPI_CONFIG(line_cfg,scl_active_edge) \
-    {                                                               \    
+    {                                                               \
     .line_config=line_cfg,                                          \
     .expect_clk_speed=PANEL_IO_3WIRE_SPI_CLK_MAX,                   \
         .spi_mode = scl_active_edge ? 1 : 0,                        \

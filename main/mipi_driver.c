@@ -85,7 +85,7 @@ esp_err_t mipi_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_h
             .vsync_pulse_width = LCD_VSYNC,
             .vsync_front_porch = LCD_VFP,
         },
-        .flags.use_dma2d = true, // use DMA2D to copy draw buffer into frame buffer
+        // .flags.use_dma2d = true, // use DMA2D to copy draw buffer into frame buffer
     };
 
 #if CONFIG_LCD_USE_PANEL_EK79007

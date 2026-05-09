@@ -23,16 +23,18 @@ static const char *TAG = "LVGL_INIT";
 extern void example_lvgl_demo_ui(lv_display_t *disp);
 
 esp_err_t lvgl_init(esp_lcd_panel_handle_t *panel, esp_lcd_panel_io_handle_t *panel_io_handle) {
+
     const lvgl_port_cfg_t lvgl_cfg = {
         .task_priority = 4,
         .task_stack = 24 * 1024,
         .task_affinity = -1,
         .task_max_sleep_ms = 500,
+        // .task_stack_caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_DEFAULT,
         .timer_period_ms = 5,
 
     };
     ESP_RETURN_ON_ERROR(lvgl_port_init(&lvgl_cfg), TAG, "LVGL port initialization failed");
-    uint32_t buf_size = LCD_H_RES * LCD_H_RES * 10;
+    uint32_t buf_size = LCD_H_RES * LCD_V_RES;
 
     const lvgl_port_display_cfg_t disp_config = {
         .panel_handle = *panel,
@@ -90,6 +92,7 @@ esp_err_t lvgl_init(esp_lcd_panel_handle_t *panel, esp_lcd_panel_io_handle_t *pa
 
     lvgl_port_lock(0);
     example_lvgl_demo_ui(display);
+    // lv_obj_t *scr = lv_scr_act();
     lvgl_port_unlock();
 
     return ESP_OK;

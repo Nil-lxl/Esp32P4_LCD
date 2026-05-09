@@ -47,7 +47,7 @@ static void set_lcd_backlight(uint32_t level) {
 extern esp_err_t lvgl_init(esp_lcd_panel_handle_t *panel, esp_lcd_panel_io_handle_t *panel_io_handle);
 
 void app_main(void) {
-    sdcard_init();
+    // sdcard_init();
 
     init_lcd_backlight();
 
