@@ -7,6 +7,7 @@ extern "C" {
 #include "esp_lcd_st7703.h"
 #include "esp_lcd_ek79007.h"
 #include "lcd_h070b13.h"
+#include "lcd_h013a08.h"
 
 #if CONFIG_LCD_USE_PANEL_EK79007
 #define LCD_PIXEL_CLK_MHZ           52
@@ -27,6 +28,17 @@ extern "C" {
 #define LCD_HBP                     20
 #define LCD_HFP                     20
 #define LCD_VSYNC                   2
+#define LCD_VBP                     30
+#define LCD_VFP                     20
+
+#elif CONFIG_LCD_USE_PANEL_H013A08
+#define LCD_PIXEL_CLK_MHZ           10
+#define LCD_H_RES                   360
+#define LCD_V_RES                   360
+#define LCD_HSYNC                   10
+#define LCD_HBP                     10
+#define LCD_HFP                     10
+#define LCD_VSYNC                   30
 #define LCD_VBP                     30
 #define LCD_VFP                     20
 
@@ -86,7 +98,7 @@ extern "C" {
 
 #endif
 
-#define MIPI_DSI_LANE_NUM           2    // 2 data lanes
+#define MIPI_DSI_LANE_NUM           1    // 2 data lanes
 #define MIPI_DSI_LANE_BITRATE_MBPS  1000 // 500MGbps
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

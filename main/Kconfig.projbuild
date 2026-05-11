@@ -17,6 +17,9 @@ menu "Example Configuration"
                         bool "H070B13"
                         default y
 
+                    config LCD_USE_PANEL_H013A08
+                        bool "H013A08"
+
                     config LCD_USE_PANEL_EK79007
                         bool "EK79007"
 

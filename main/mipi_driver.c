@@ -116,13 +116,28 @@ esp_err_t mipi_lcd_init(esp_lcd_panel_handle_t *panel_handle, esp_lcd_panel_io_h
         .vendor_config = &vendor_config,
     };
     ESP_ERROR_CHECK(esp_lcd_new_panel_h070b13(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
+#elif CONFIG_LCD_USE_PANEL_H013A08
+    h013a08_vendor_config_t vendor_config = {
+    .mipi_config = {
+        .dsi_bus = dsi_bus_handle,
+        .dpi_config = &dpi_config,
+    },
+    };
+    esp_lcd_panel_dev_config_t lcd_dev_config = {
+        .reset_gpio_num = PIN_NUM_LCD_RST,
+        .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
+        .bits_per_pixel = LCD_BITS_PER_PIXEL,
+        .vendor_config = &vendor_config,
+    };
+    ESP_ERROR_CHECK(esp_lcd_new_panel_h013a08(panel_io_handle, &lcd_dev_config, &mipi_dsi_panel));
+
 #elif CONFIG_LCD_USE_PANEL_ST7703
     st7703_vendor_config_t vendor_config = {
         .mipi_config = {
             .dsi_bus = dsi_bus_handle,
             .dpi_config = &dpi_config,
         },
-    };
+};
     esp_lcd_panel_dev_config_t lcd_dev_config = {
         .reset_gpio_num = PIN_NUM_LCD_RST,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,

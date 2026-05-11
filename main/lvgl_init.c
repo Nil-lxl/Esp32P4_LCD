@@ -26,7 +26,7 @@ esp_err_t lvgl_init(esp_lcd_panel_handle_t *panel, esp_lcd_panel_io_handle_t *pa
 
     const lvgl_port_cfg_t lvgl_cfg = {
         .task_priority = 4,
-        .task_stack = 24 * 1024,
+        .task_stack = 16 * 1024,
         .task_affinity = -1,
         .task_max_sleep_ms = 500,
         // .task_stack_caps = MALLOC_CAP_INTERNAL | MALLOC_CAP_DEFAULT,
@@ -92,7 +92,6 @@ esp_err_t lvgl_init(esp_lcd_panel_handle_t *panel, esp_lcd_panel_io_handle_t *pa
 
     lvgl_port_lock(0);
     example_lvgl_demo_ui(display);
-    // lv_obj_t *scr = lv_scr_act();
     lvgl_port_unlock();
 
     return ESP_OK;
